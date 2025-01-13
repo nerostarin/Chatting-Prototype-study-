@@ -13,11 +13,10 @@ public class ChatController {
     @Autowired
     private ChatMessageRepository chatMessageRepository;
 
-
-    @GetMapping("/get")
-    public Iterable<MessageVo> getMessages() {
-        return chatMessageRepository.findAll();
-    }
+//    @GetMapping("/get")
+//    public Iterable<MessageVo> getMessages() {
+//        return chatMessageRepository.findAll();
+//    }
 
     @GetMapping("/{issueId}")
     public Iterable<MessageVo> selectMessages(@PathVariable int issueId) {
