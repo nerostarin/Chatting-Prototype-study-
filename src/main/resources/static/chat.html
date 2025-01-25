@@ -31,8 +31,7 @@
 <button id="sendButton">전송</button>
 
 <script>
-    // 이슈 ID 설정 (예시로 101을 사용, 실제로는 동적으로 설정 가능)
-    const issueId = 101;
+    const issueId = 102;
     const socket = new WebSocket(`ws://localhost:8080/chat/${issueId}`);
 
     // 서버에서 메시지가 도착하면 처리하는 부분
@@ -60,21 +59,44 @@
     function displayMessage(message) {
         const chatBox = document.getElementById('chatBox');
         const newMessage = document.createElement('div');
-        newMessage.textContent = `${message.sender}: ${message.content}`;
+        newMessage.textContent = `${message.sender}: ${message.content}, ${message.readBy}`;
+        newMessage.dataset.id = message.id;  // 메시지 ID를 데이터로 저장
         chatBox.appendChild(newMessage);
         chatBox.scrollTop = chatBox.scrollHeight; // 새 메시지가 오면 자동으로 스크롤 맨 아래로
     }
 
-    // 페이지가 로드될 때 기존 메시지 불러오기
-    window.onload = function() {
+    // 메시지를 읽음 처리하는 함수
+    function markAsRead() {
+        fetch(`/api/messages/read/${issueId}`, {  // API 주소를 수정
+            method: 'GET',
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('읽음 처리 완료');
+                fetchAndUpdateMessages(); // 메시지 업데이트
+            }
+        })
+        .catch(error => console.error('Error marking message as read:', error));
+    }
+
+    // 기존 메시지 불러오기 함수
+    function fetchMessages() {
         fetch(`/api/messages/${issueId}`)
             .then(response => response.json())
             .then(messages => {
+                const chatBox = document.getElementById('chatBox');
+                chatBox.innerHTML = ''; // 이전 메시지들 제거
+
                 messages.forEach(message => {
                     displayMessage(message);
                 });
             })
             .catch(error => console.error('Error fetching messages:', error));
+    }
+
+    // 페이지가 로드될 때 기존 메시지 불러오기
+    window.onload = function() {
+        fetchMessages(); // 페이지가 로드될 때 메시지 불러오기
     };
 
     // 메시지 전송 버튼 클릭 시 서버로 메시지를 전송
@@ -96,6 +118,33 @@
             messageInput.value = '';
         }
     };
+
+    // 텍스트박스에 포커스가 갔을 때 메시지 읽음 처리
+    document.getElementById('messageInput').addEventListener('focus', function() {
+        markAsRead();  // 텍스트박스에 커서가 들어갔을 때 읽음 처리 API 호출
+    });
+
+    // 메시지를 읽음 처리 후, 업데이트된 메시지 리스트로 기존 메시지 업데이트
+    function fetchAndUpdateMessages() {
+        fetch(`/api/messages/read/${issueId}`)
+            .then(response => response.json())
+            .then(updatedMessages => {
+                const chatBox = document.getElementById('chatBox');
+                const existingMessages = chatBox.getElementsByTagName('div');
+
+                // 기존 메시지들 중에서 ID가 일치하는 메시지를 찾아서 업데이트
+                updatedMessages.forEach(updatedMessage => {
+                    for (let i = 0; i < existingMessages.length; i++) {
+                        const existingMessage = existingMessages[i];
+                        if (existingMessage.dataset.id == updatedMessage.id) {
+                            existingMessage.textContent = `${updatedMessage.sender}: ${updatedMessage.content}, ${updatedMessage.readBy}`;
+                            break;
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error('Error fetching updated messages:', error));
+    }
 </script>
 </body>
 </html>
